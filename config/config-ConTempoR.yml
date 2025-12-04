@@ -1,0 +1,187 @@
+name: "ConTempoR"
+log_level: "INFO"
+
+#################################################################
+#  General file paths
+#################################################################
+path_to_wikipedia_mappings: "wikipedia_mappings.pickle"
+path_to_labels: "labels.pickle"
+path_to_wikidata_mappings: "augmented_wikidata_mappings.pickle"
+path_to_cache_wikipedia_to_wikidata: "wikipedia_wikidata_mappings.pickle"
+
+#################################################################
+#  Data storage path
+#################################################################
+data_path: "_data"
+result_path: "_intermediate_results"
+wikipedia_dump_file: "cache_wikipedia.pickle"
+temporal_fact_dump_file: "cache_temporal_fact.pickle"
+
+#################################################################
+#  Target number of questions
+#################################################################
+# Define target number of pseudo-questions
+target_question_number: 1000
+pseudo_questions_in_total_file: "pseudo_question_in_total.json"
+topic_entity_in_total_file: "topic_entity_in_total.txt"
+
+#################################################################
+#  Year page retrieval
+#################################################################
+# Define start time and end time of year page
+year_start: 1801
+year_end: 2025
+
+#################################################################
+#  Topici entity sampling
+#################################################################
+# Define year range: topic sampling is performed in each range respectively for improving efficiency
+year_range_interval: 50
+# Define boundary to be overlapping: overlapping 10 years as constraint
+overlap_years_num: 10
+# The number of sampled entity per iteration
+sample_size: 150
+# Define the frequency threshold of long tail entity
+long_tail_entity_frequency: 20
+# Define the frequency threshold of prominent entity
+prominent_entity_frequency: 500
+# Define the ratio of long tail vs. prominent vs. other entities
+ratio_of_sample:
+  long: 1
+  prominent: 1
+  other: 1
+# Define the domain coverage rate
+domain_coverage: 0.1
+
+  #################################################################
+  #  Information snippet retrieval
+  #################################################################
+# Define sources for retrieval
+source: [ "kb", "text", "info" ]
+# Define maximum entities in the information snippet from text or infobox
+max_non_date_entity_in_text: 3  # maximum non-date entity in text as main and constraint
+# Signal keywords file paths
+path_to_explicit_signals: "signal_keywords/explicit_signals.txt"
+# Define reference time for today, current, etc
+reference_time: '2023-01-01'
+# Define end time if there is only start time but no end time for KB facts
+reference_end_time: '2050-12-31'
+#SpaCy model
+spacy_model: "en_core_web_sm"
+
+#################################################################
+#  Parameters - CLOCQ
+#################################################################
+clocq_params:
+  h_match: 0.4
+  h_rel: 0.2
+  h_conn: 0.3
+  h_coh: 0.1
+  d: 20
+  k: 5
+  p_setting: 1000 # setting for search_space function
+  bm25_limit: False
+clocq_p: 1000 #  setting for neighborhood function(s)
+clocq_use_api: True # using CLOCQClientInterface
+clocq_host: "https://clocq.mpi-inf.mpg.de/api" # host for client
+clocq_port: "443" # port for client
+
+#################################################################
+#  Pseudo-questions construction
+#################################################################
+# Similarity threshold between the snippets for generating list of facts
+# Similarity threshold for information from KB or info
+similar_threshold: 0.9
+# Similarity threshold for information from text
+text_similar_threshold: 0.7
+# Maximum length of pseudo-questions
+max_pseudo_question_length: 80
+# Define time scope of information snippets being candidates of main and constraint
+MIN_DATE: "1000-01-01"  # minimum date
+MAX_DATE: "5000-12-31"  # maximum date
+pseudo_question_file: "pseudo_question.json"
+topic_entity_file: "topic_entity.txt"
+
+#################################################################
+#  GPT configuration
+#################################################################
+gpt3_use_cache: True
+gpt3_cache_path: "gpt3_cache"
+openai_organization: "your organization"
+openai_api_key: "your key"
+gpt3_model: "text-davinci-003"
+
+#################################################################
+#  Filtering condition after rephrasing
+#################################################################
+max_token_length: 30
+min_token_length: 8
+max_question_entity: 10
+max_answer_entity: 10
+
+#################################################################
+#  Question rephrase workflow
+#################################################################
+question_rephrase_workflow:
+  enabled: true
+  stage0:
+    output_path: "_intermediate_results/data_processing/00_initial_questions.json"
+  data_filter:
+    enabled: true
+    input_path: "_intermediate_results/data_processing/00_initial_questions.json"
+    output_path: "_intermediate_results/data_processing/10_filtered_nested.json"
+    grouped_topic_output: "_intermediate_results/data_processing/10_grouped_by_topic.json"
+    pqc_output: "_intermediate_results/data_processing/10_pqc_list.json"
+    intermediate_dir: "_intermediate_results/data_processing/precheck_intermediate"
+    seed: 42
+    extract_min_len: 2
+    extract_dedup: true
+  rephrase_stage1:
+    input_path: "_intermediate_results/data_processing/10_filtered_nested.json"
+    output_path: "_intermediate_results/data_processing/20_rephrased_nested.json"
+    model: "gpt-4o-mini"
+    temperature: 0.0
+    max_tokens: 256
+    api_key: ""
+    organization: ""
+    use_cache: true
+    cache_dir: "_intermediate_results/data_processing/.cache/rephrase"
+    overwrite: true
+    signal_retry: true
+    signal_retry_max: 2
+  pipeline_2_7:
+    input_path: "_intermediate_results/data_processing/20_rephrased_nested.json"
+    output_path: "_intermediate_results/data_processing/30_stage5_output.json"
+    intermediate_dir: "_intermediate_results/data_processing/2_7_intermediate"
+    stop_after_stage: 5
+    filter_options:
+      stage2_min_dicts: 5
+      stage3_max_question_entities: 4
+      stage4_min_turns: 5
+      stage5_min_length: 5
+    stage6_proxy:
+      seed: 42
+      api_key: ""
+      gender_model: "gpt-4o-mini"
+      polish_model: "gpt-4o-mini"
+      temperature: 0.0
+      gender_cache: "_intermediate_results/data_processing/.cache/gender.json"
+      disable_gpt_polish: false
+      max_tries: 9
+      max_polish_tries: 1
+      s1_prob: 0.33
+      progress: false
+  stage6:
+    input_path: "_intermediate_results/data_processing/30_stage5_output.json"
+    output_path: "_intermediate_results/data_processing/final_questions.json"
+    seed: 42
+    api_key: ""
+    gender_model: "gpt-4o-mini"
+    polish_model: "gpt-4o-mini"
+    temperature: 0.0
+    gender_cache: "_intermediate_results/data_processing/.cache/gender.json"
+    disable_gpt_polish: false
+    max_tries: 9
+    max_polish_tries: 1
+    s1_prob: 0.33
+    progress: false
