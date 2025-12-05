@@ -41,7 +41,7 @@ def normalize_for_fuzzy(s: str) -> str:
     s2 = re.sub(r"\s+", " ", s2).strip()
     return s2
 
-# 严格缩写：忽略停用词，只接受 ac == bc 的匹配
+# Strict acronym matching: ignore stopwords and only accept matches where ac == bc
 _ACRONYM_STOPWORDS = {
     "of", "the", "and", "a", "an",
     "de", "da", "di", "du", "del",
@@ -59,7 +59,7 @@ def _acronym(s: str) -> str:
             letters.append(t[0])
     return "".join(letters)
 
-# 别名映射（保留，可按需删减）
+# Alias mapping (keep; trim as needed)
 _ALIAS_MAP = {
     "us": ["united states", "u s a", "usa", "u s"],
     "uk": ["united kingdom", "u k"],
@@ -73,16 +73,16 @@ def fuzzy_match(pred: str, gold: str) -> bool:
     if not a or not b:
         return False
 
-    # 1) 基础：完全相等 / 子串（不涉及缩写）
+    # 1) Basic: exact or substring match (no acronyms)
     if a == b or a in b or b in a:
         return True
 
-    # 2) 严格“缩写对缩写”匹配（只接受 ac == bc）
+    # 2) Strict acronym-to-acronym match (only accept ac == bc)
     ac, bc = _acronym(a), _acronym(b)
     if ac and bc and (ac == bc):
         return True
 
-    # 3) 别名映射（单向或双向）
+    # 3) Alias mapping (one-way or two-way)
     if a in _ALIAS_MAP and any(alias in b for alias in _ALIAS_MAP[a]):
         return True
     if b in _ALIAS_MAP and any(alias in a for alias in _ALIAS_MAP[b]):
@@ -160,7 +160,7 @@ def get_gold_maps(dataset: List[Dict[str, Any]]):
     return m
 
 def build_turnid_to_cid_map(dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """用于 JSONL 仅含 turn_id 的情况，反查 conversation_id。"""
+    """For JSONL files that only contain turn_id, backfill conversation_id."""
     idx = {}
     for conv in dataset:
         cid = conv.get("conversation_id")
@@ -199,15 +199,15 @@ def gold_first_and_relation(turn: Dict[str, Any]):
     return first, macro
 
 # -----------------------------
-# S-tags（仅从 gold 读取；支持多标签）
+# S-tags (read from gold only; supports multi-label)
 # -----------------------------
 
 _S_TAG_CAPTURE = re.compile(r"\b(S[1-4])(?:(?=[_+\-])|\b)")
 
 def extract_strategy_tags_from_gold(turn: Dict[str, Any]) -> Set[str]:
     """
-    仅从 gold 的 link_strategy 字段抽取 S1/S2/S3/S4。
-    支持字符串或列表；支持 'S1_pronoun+S2_basic_temporal' 的复合形式；忽略 'none'。
+    Extract S1/S2/S3/S4 only from gold.link_strategy.
+    Supports string or list; supports compound forms like 'S1_pronoun+S2_basic_temporal'; ignores 'none'.
     """
     tags: Set[str] = set()
     ls = turn.get("link_strategy")
@@ -232,9 +232,9 @@ def extract_strategy_tags_from_gold(turn: Dict[str, Any]) -> Set[str]:
 
 def assign_strategy_tags(turn: Dict[str, Any], mode: str) -> Set[str]:
     """
-    返回用于统计的 S-tags 集合。
-    mode == 'multi'：保留全部（多标签）。
-    mode == 'exclusive'：互斥优先级 S4 > S3 > S2 > S1，仅取一个。
+    Return the S-tag set used for stats.
+    mode == 'multi': keep all tags (multi-label).
+    mode == 'exclusive': mutually exclusive with priority S4 > S3 > S2 > S1, keep only one.
     """
     tags = extract_strategy_tags_from_gold(turn)
     if mode == "exclusive":
@@ -245,7 +245,7 @@ def assign_strategy_tags(turn: Dict[str, Any], mode: str) -> Set[str]:
     return tags
 
 # -----------------------------
-# Few-shot 构建（整轮对话 + 自动预算裁剪）
+# Few-shot construction (full conversations + automatic budget trimming)
 # -----------------------------
 
 def example_from_turn(turn: Dict[str, Any]) -> str:
@@ -267,15 +267,15 @@ def example_from_turn(turn: Dict[str, Any]) -> str:
     return f"Q: {q}\nA: {json.dumps(gold_json, ensure_ascii=False)}"
 
 def estimate_tokens_by_chars(text: str) -> int:
-    # 粗略估算：≈4 chars / token，最少给 1
+    # Rough estimate: ~4 chars per token, allocate at least 1
     return max(1, (len(text) + 3) // 4)
 
 def pack_full_conversation_shots(convs: List[Dict[str, Any]],
                                  k_conversations: int,
                                  token_budget_for_shots: int) -> List[Dict[str, Any]]:
     """
-    取最早的前 K 个完整对话的所有 turns，拼成 few-shot。
-    若 examples 文本 token 数 > 预算，则按“整轮对话”为单位，从最后一轮开始回退，直到落入预算。
+    Take all turns from the earliest K full conversations as few-shots.
+    If examples exceed the token budget, roll back by whole conversations from the end until within budget.
     """
     selected_convs = convs[:max(0, int(k_conversations))]
     shots: List[Dict[str, Any]] = []
@@ -294,7 +294,7 @@ def pack_full_conversation_shots(convs: List[Dict[str, Any]],
         est_tokens = estimate_tokens_by_chars(examples_text)
         if est_tokens <= token_budget_for_shots:
             return turns_now
-        # 回退一个“完整对话”
+        # Roll back one full conversation
         last_cid = None
         for i in range(len(selected_convs)-1, -1, -1):
             c = selected_convs[i]
@@ -309,7 +309,7 @@ def pack_full_conversation_shots(convs: List[Dict[str, Any]],
     return []
 
 # -----------------------------
-# Prompt 组装（加入历史问题）
+# Prompt assembly (include prior questions)
 # -----------------------------
 
 def build_prompt(shot_turns: List[Dict[str, Any]],
@@ -351,7 +351,7 @@ def build_prompt(shot_turns: List[Dict[str, Any]],
             {"role": "user", "content": user}]
 
 # -----------------------------
-# OpenAI / vLLM client（HTTP 直连）
+# OpenAI / vLLM client (direct HTTP)
 # -----------------------------
 
 def extract_first_balanced_json_block(s: str) -> Optional[str]:
@@ -395,7 +395,7 @@ def call_openai(messages: List[Dict[str, str]],
                 max_retries: int = 3,
                 retry_backoff: float = 1.2) -> str:
     """
-    纯 HTTP 直连 vLLM /v1/chat/completions，不依赖 openai SDK。
+    Direct HTTP call to vLLM /v1/chat/completions without relying on the OpenAI SDK.
     """
     import requests
     import json as _json
@@ -404,7 +404,7 @@ def call_openai(messages: List[Dict[str, str]],
     url = url_root + "/chat/completions"
     headers = {"Content-Type": "application/json"}
     if api_key and api_key.strip():
-        headers["Authorization"] = f"Bearer {api_key.strip()}"  # 本地 vLLM 通常不校验
+        headers["Authorization"] = f"Bearer {api_key.strip()}"  # Local vLLM typically does not validate this
 
     payload = {
         "model": model,
@@ -430,29 +430,29 @@ def call_openai(messages: List[Dict[str, str]],
     raise RuntimeError(f"HTTP call to vLLM failed after {max_retries} attempts: {last_err}")
 
 # -----------------------------
-# Eval helpers: 读取预测，兼容 .json 与 .jsonl
+# Eval helpers: load predictions, compatible with .json and .jsonl
 # -----------------------------
 
 def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Dict[str, Any]]:
     """
-    兼容读取：
-    - JSON 数组：直接返回（要求每项含 conversation_id/turn_id/answer_entity/time_range/pred_relation(可无)）
-    - JSONL：逐行读取
-        * 若已有完整字段，直接采纳
-        * 若只有 turn_id + raw，则 parse raw 得到 answer_entity/time_range，再通过 turn_id 反查 conversation_id
+    Compatibility loader:
+    - JSON array: return directly (each item should contain conversation_id/turn_id/answer_entity/time_range/pred_relation(optional))
+    - JSONL: read line by line
+        * If already structured, take as-is
+        * If only turn_id + raw, parse raw to get answer_entity/time_range, then look up conversation_id via turn_id
     """
     preds: List[Dict[str, Any]] = []
 
-    # 尝试当成 JSON 数组
+    # Try as JSON array
     try:
         with open(path, "r", encoding="utf-8") as f:
             obj = json.load(f)
         if isinstance(obj, list):
-            # 简单验证
+            # Basic validation
             for it in obj:
                 if not isinstance(it, dict):
                     continue
-                # 容错：缺失字段时给默认
+                # Lenient defaults when fields are missing
                 preds.append({
                     "conversation_id": it.get("conversation_id"),
                     "turn_id": it.get("turn_id"),
@@ -461,13 +461,13 @@ def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Di
                     "pred_relation": it.get("pred_relation"),
                 })
             return preds
-        # 如果不是 list，也继续走 JSONL 逻辑
+        # If not a list, fall through to JSONL logic
     except Exception:
         pass
 
-    # 当成 JSONL 读取
+    # Read as JSONL
     turnid2cid = build_turnid_to_cid_map(dataset)
-    # 可复用模型输出解析
+    # Reuse model output parsing
     for line in open(path, "r", encoding="utf-8"):
         line = line.strip()
         if not line:
@@ -475,10 +475,10 @@ def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Di
         try:
             rec = json.loads(line)
         except Exception:
-            # 不可解析，跳过该行
+            # Unparsable line; skip
             continue
 
-        # 情况 A：JSONL 已是结构化预测
+        # Case A: JSONL already contains structured predictions
         if all(k in rec for k in ("conversation_id", "turn_id", "answer_entity", "time_range")):
             preds.append({
                 "conversation_id": rec.get("conversation_id"),
@@ -489,11 +489,11 @@ def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Di
             })
             continue
 
-        # 情况 B：debug_raw_model_outputs.jsonl 格式：{"turn_id": "...", "raw": "..."} 或 {"turn_id": "...", "error": "..."}
+        # Case B: debug_raw_model_outputs.jsonl format: {"turn_id": "...", "raw": "..."} or {"turn_id": "...", "error": "..."}
         tid = rec.get("turn_id")
         raw = rec.get("raw") or ""
         if tid is None:
-            # 缺少 turn_id 无法使用
+            # Cannot use without turn_id
             continue
 
         obj = parse_model_json(raw) if raw else {}
@@ -561,7 +561,7 @@ def evaluate_test(dataset: List[Dict[str, Any]],
         "relation": {"Accuracy": 0.0},
         "by_strategy": {},
         "by_strategy_missing": 0,
-        "by_strategy_notes": "S-tags 完全来源于 gold.link_strategy；未标注样本不计入任何桶。样本可能多标签计入（multi 模式），合计可能大于总题量。"
+        "by_strategy_notes": "S-tags come solely from gold.link_strategy; untagged samples are not counted. Samples can be multi-label in 'multi' mode, so totals may exceed dataset size."
     }
 
     for p in tqdm(preds, desc="Evaluating", unit="turn"):
@@ -654,7 +654,7 @@ def evaluate_test(dataset: List[Dict[str, Any]],
         if mark_test_correct and overall_ok:
             correct_ids.append(str(tid))
 
-    # 汇总
+    # Aggregate results
     if total > 0:
         res["entity"]["EM"] = round(em_hits / total, 4)
         res["entity"]["Fuzzy"] = round(fuzzy_hits / total, 4)
@@ -704,17 +704,17 @@ def evaluate_test(dataset: List[Dict[str, Any]],
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True, help="Full dataset JSON (single list of conversations)")
-    ap.add_argument("--shots_conversations", type=int, default=10, help="How many earliest conversations used as few-shots (完整对话)")
-    # 旧参数保留但不再使用（为了兼容命令行）；实际已按完整对话取样
+    ap.add_argument("--shots_conversations", type=int, default=10, help="How many earliest full conversations to use as few-shots")
+    # Legacy params kept for CLI compatibility; ignored because we sample full conversations
     ap.add_argument("--per_dialog_shot_limit", type=int, default=-1, help="[deprecated] ignored in full-conversation mode")
     ap.add_argument("--max_shot_examples", type=int, default=-1, help="[deprecated] ignored in full-conversation mode")
 
     ap.add_argument("--shots_token_budget", type=int, default=1800,
-                    help="few-shot 预算（token），超出则按整轮对话回退；估算规则约 4 chars ≈ 1 token")
+                    help="Few-shot token budget; if exceeded, roll back by whole conversations (~4 chars per token estimate)")
     ap.add_argument("--model_context_tokens", type=int, default=3072,
-                    help="模型最大上下文 token 上限（与 vLLM --max-model-len 保持一致，仅用于给预算留余量）")
+                    help="Model max context tokens (align with vLLM --max-model-len; used to leave headroom)")
     ap.add_argument("--reserve_for_current_qa", type=int, default=700,
-                    help="为 system + 当前问题 + 模型回答预留的 token；避免超限（经验值，可微调）")
+                    help="Tokens reserved for system + current question + model answer to avoid exceeding context (tunable)")
 
     ap.add_argument("--auto_eval_with_openai", action="store_true", help="Enable OpenAI/vLLM calls to produce predictions")
     ap.add_argument("--openai_model", default="gpt-4o-mini")
@@ -729,7 +729,7 @@ def main():
     ap.add_argument("--eval_test_preds", help="If provided, evaluate this predictions JSON instead of auto eval")
     ap.add_argument("--max_test_turns", type=int, help="Debug only: cap number of test turns for quick run")
     ap.add_argument("--strategy_assignment", choices=["multi", "exclusive"], default="multi",
-                    help="multi(默认，同一题可落入多个桶) / exclusive(互斥，优先级 S4>S3>S2>S1)")
+                    help="multi (default, a question can fall into multiple buckets) / exclusive (priority S4>S3>S2>S1)")
     ap.add_argument("--debug_raw_dump", action="store_true", help="Dump raw model outputs to debug_raw_model_outputs.jsonl")
     args = ap.parse_args()
 
@@ -739,18 +739,18 @@ def main():
         print("Top-level must be a list of conversations.", file=sys.stderr)
         sys.exit(1)
 
-    # Few-shot conversations（完整对话）
+    # Few-shot conversations (full dialogs)
     K = max(0, int(args.shots_conversations))
-    shots_convs = dataset[:K]           # 最早的 K 轮对话
-    test_convs  = dataset[450:528]      # 对话 451–606 作为测试集（保持你的切片）
+    shots_convs = dataset[:K]           # Earliest K conversations
+    test_convs  = dataset[450:528]      # Conversations 451–606 as test split (keep original slice)
 
-    # few-shot 预算（为当前问答留余量）
+    # Few-shot budget (reserve for current QA)
     examples_budget = max(0, args.shots_token_budget)
     if args.model_context_tokens > 0 and args.reserve_for_current_qa > 0:
         hard_cap = max(0, args.model_context_tokens - args.reserve_for_current_qa)
         examples_budget = min(examples_budget, hard_cap)
 
-    # 用完整对话拼 shots，若超预算则整轮回退
+    # Build shots from full conversations; if over budget, roll back entire conversations
     shot_turns: List[Dict[str, Any]] = pack_full_conversation_shots(
         shots_convs,
         k_conversations=K,
@@ -776,13 +776,13 @@ def main():
 
     elif args.auto_eval_with_openai:
         if not args.openai_base_url:
-            print("WARN: --openai_base_url 未设置，若使用本地 vLLM 请加 --openai_base_url http://localhost:8000/v1", file=sys.stderr)
+            print("WARN: --openai_base_url is not set; for local vLLM use --openai_base_url http://localhost:8000/v1", file=sys.stderr)
 
         raw_dump_f = None
         if args.debug_raw_dump:
             raw_dump_f = open("debug_raw_model_outputs.jsonl", "w", encoding="utf-8")
 
-        # 每个 conversation 维护历史提问
+        # Maintain question history per conversation
         questions_history_by_cid: Dict[Any, List[str]] = {}
 
         for t in tqdm(test_turns, desc="Predicting", unit="turn"):
@@ -819,7 +819,7 @@ def main():
                 "pred_relation": obj.get("pred_relation")
             })
 
-            # 更新历史提问
+            # Update question history
             history_list = questions_history_by_cid.setdefault(cid, [])
             history_list.append(q)
 

@@ -416,7 +416,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", required=True, help="Full dataset JSON (single list of conversations)")
     ap.add_argument("--shots_conversations", type=int, default=10, help="How many earliest conversations used as few-shots")
-    # 对齐但在 flat 中不使用的参数（保留解析以兼容脚本族）
+    # Unused in flat mode, kept for CLI compatibility with related scripts
     ap.add_argument("--per_dialog_shot_limit", type=int, default=-1, help="[deprecated] ignored in flat mode")
     ap.add_argument("--max_shot_examples", type=int, default=-1, help="[deprecated] ignored in flat mode")
     ap.add_argument("--shots_token_budget", type=int, default=1800, help="ignored in flat")
@@ -475,7 +475,7 @@ def main():
         preds = load_predictions_compat(dataset, args.eval_test_preds)
 
     elif args.auto_eval_with_openai:
-        # OpenAI 官方需要 api_key；本地 vLLM 通常允许无 key（视服务配置）
+        # OpenAI requires an api_key; local vLLM often works without one depending on service config
         if (not args.openai_base_url or "api.openai.com" in (args.openai_base_url or "")) and not args.openai_api_key:
             print("ERROR: --auto_eval_with_openai requires --openai_api_key for OpenAI API", file=sys.stderr)
             sys.exit(2)

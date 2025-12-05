@@ -116,8 +116,8 @@ install_requires = [
 ]
 
 setup(
-    name="ConTempoR",                            # 项目名
-    version="1.0.0",                       # 版本号
+    name="ConTempoR",                            # Package name
+    version="1.0.0",                       # Version
     author="Xinghou Hou",
     description="ConTempoR Project",
     long_description=open(os.path.join(here, "README.md"), encoding="utf-8").read(),
