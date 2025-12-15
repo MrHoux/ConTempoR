@@ -21,12 +21,14 @@ pip install -e .
 # Or with pip only
 pip install -r requirements.txt
 ```
-
+hdt 2.3 can be built with GCC 9.4.0.
 ### Dependencies
 
 ConTempoR makes use of [CLOCQ](https://github.com/PhilippChr/CLOCQ) for retrieving facts from WIKIDATA.
 CLOCQ can be conveniently integrated via the [publicly available API](https://clocq.mpi-inf.mpg.de), using the client
 from [the repo](https://github.com/PhilippChr/CLOCQ). CLOCQ must be initialized before using the client.
+
+Please clone CLOCQ into ./ and initialise CLOCQ.
 
 ## Running the pipeline
 
@@ -52,7 +54,7 @@ To construct the benchmark requires following major steps.
 
 ## Data
 You need the following data. You can download
-from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz):
+from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz) and save to ./_data:
 
 - wikipedia_wikidata_mappings.pickle
 - wikipedia_mappings.pickle
@@ -70,7 +72,7 @@ from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz):
 
 ## Credits & Guidelines
 
-- ConTempoR builds upon [TIQ](https://github.com/zhenjia2017/TIQ) under permission and keeps the same CLOCQ dependency chain.
+- ConTempoR builds upon [TIQ](https://github.com/zhenjia2017/TIQ) and keeps the same CLOCQ dependency chain.
 - Please follow CLOCQ’s licence and usage rules.
 
 ## Citation
