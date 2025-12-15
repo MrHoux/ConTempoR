@@ -34,13 +34,13 @@ Please clone CLOCQ into ./ and initialise CLOCQ.
 
 To construct the benchmark requires following major steps.
 
-#### 1. Retrieve year pages from Wikipedia
+#### 1. Retrieve year pages from Wikidata, Wikipedia
 
 ```bash
   bash scripts/pipeline.sh --year-page-retrieve config/config-ConTempoR.yml
 ```
 
-#### 2. Construct pseudo-questions with GPT
+#### 2. Construct pseudo-questions
 
 ```bash
   bash scripts/pipeline.sh --pseudoquestion-generate config/config-ConTempoR.yml
