@@ -116,8 +116,8 @@ install_requires = [
 ]
 
 setup(
-    name="ConTempoR",                            # Package name
-    version="1.0.0",                       # Version
+    name="ConTempoR",
+    version="1.0.0",
     author="Xinghou Hou",
     description="ConTempoR Project",
     long_description=open(os.path.join(here, "README.md"), encoding="utf-8").read(),
@@ -126,7 +126,6 @@ setup(
     packages=find_packages(exclude=["tests*", "docs*"]),
     python_requires=">=3.8,<3.9",
     install_requires=install_requires,
-    dependency_links=dependency_links,
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3.8",

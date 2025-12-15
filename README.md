@@ -1,19 +1,11 @@
 # ConTempoR
 
- **ConTempoR** (Conversational Temporal Reasoning Benchmark), a systematic methodology and resource for constructing temporally consistent dialogues from static knowledge bases. As illustrated in Figure 1, we generate multi-turn interactions by applying three Contextual Dependency Types and rigorously injecting temporal logic via four novel Temporal Relation Assignment Strategies:
+ **ConTempoR** (Conversational Temporal Reasoning Benchmark), a systematic methodology and resource for constructing temporally consistent dialogues from static knowledge bases. As illustrated in Figure 1, we generate multi-turn interactions by applying three Contextual Dependency Types and rigorously injecting temporal logic via four novel Temporal Relation Assignment Strategies
 
-– S1: Pronoun-Based Coreference Reasoning. Tests coreference resolution within temporal contexts by substituting repeated entities with pronouns to simulate natural discourse.
+![Overall Pipeline](intro.png)
 
-– S2: Explicit Temporal Connective Reasoning. Evaluates the ability to follow chronological logic using explicit markers (e.g., “Meanwhile”).
-
-– S3: Relative Temporal-Shift Reasoning. Demands arithmetic reasoning to calculate valid time scopes based on precise relative offsets (e.g., “Two decades later”).
-
-– S4: Abstract Temporal-Shift Reasoning. Simulates vague memory by
-replacing precise constraints with abstract offsets (e.g., “A few months later”),
 
  It reuses parts of the [TIQ](https://github.com/zhenjia2017/TIQ) codebase but extensively refactors and extends them in package. Evidence retrieval runs through [CLOCQ](https://github.com/PhilippChr/CLOCQ).
-
-- Repository: <https://github.com/MrHoux/ConTempoR>
 
 ## Installation
 

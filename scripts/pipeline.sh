@@ -1,5 +1,4 @@
 #!/usr/bin/bash
-
 ## check argument length
 if [[ $# -lt 1 ]]
 then
