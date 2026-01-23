@@ -75,6 +75,10 @@ from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz) and
 - ConTempoR builds upon [TIQ](https://github.com/zhenjia2017/TIQ) and keeps the same CLOCQ dependency chain.
 - Please follow CLOCQ’s licence and usage rules.
 
+## ConTempoR Benchmark
+
+**DOI:** 10.5281/zenodo.18354763
+
 ## Availability
 
 The ConTempoR benchmark dataset and evaluation scripts are publicly available via this GitHub repository and are archived on Zenodo for long-term access.
