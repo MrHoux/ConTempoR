@@ -93,6 +93,11 @@ The dataset is provided in JSON format. Each instance includes the question, ans
 - Data: Creative Commons Attribution 4.0 International (CC BY 4.0) (see DATA_LICENSE)
 
 ## Citation
+
+If you use ConTempoR, please cite the Zenodo record:
+
+- DOI: https://doi.org/10.5281/zenodo.18341474
+
 This code is based on the method from:
 ```bibtex
 @article{jia2024faithful,
