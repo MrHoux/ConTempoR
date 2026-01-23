@@ -85,7 +85,7 @@ The ConTempoR benchmark dataset and evaluation scripts are publicly available vi
 
 ## Data Format
 
-The dataset is provided in JSON format. Each instance includes the question, answer, normalized time range, and Wikidata evidences, enabling alignment with knowledge graphs and semantic QA pipelines.
+The dataset is provided in JSON format. Each instance includes the question, answer, related entities with Wikidata ID, normalized time range, and Wikidata evidences, enabling alignment with knowledge graphs and semantic QA pipelines.
 
 ## License
 
@@ -96,7 +96,7 @@ The dataset is provided in JSON format. Each instance includes the question, ans
 
 If you use ConTempoR, please cite the Zenodo record:
 
-- DOI: https://doi.org/10.5281/zenodo.18341474
+- DOI: https://doi.org/10.5281/zenodo.18354763
 
 This code is based on the method from:
 ```bibtex
