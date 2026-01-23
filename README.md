@@ -75,6 +75,19 @@ from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz) and
 - ConTempoR builds upon [TIQ](https://github.com/zhenjia2017/TIQ) and keeps the same CLOCQ dependency chain.
 - Please follow CLOCQ’s licence and usage rules.
 
+## Availability
+
+The ConTempoR benchmark dataset and evaluation scripts are publicly available via this GitHub repository and are archived on Zenodo for long-term access.
+
+## Data Format
+
+The dataset is provided in JSON format. Each instance includes the question, answer, normalized time range, and Wikidata evidences, enabling alignment with knowledge graphs and semantic QA pipelines.
+
+## License
+
+- Code: MIT License (see LICENSE)
+- Data: Creative Commons Attribution 4.0 International (CC BY 4.0) (see DATA_LICENSE)
+
 ## Citation
 This code is based on the method from:
 ```bibtex

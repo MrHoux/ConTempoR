@@ -1,0 +1,19 @@
+# Default: text files use LF
+* text=auto eol=lf
+
+# Shell scripts
+*.sh     text eol=lf
+*.bash   text eol=lf
+
+# Python
+*.py     text eol=lf
+
+# Config / YAML
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.cfg    text eol=lf
+*.ini    text eol=lf
+
+# Build / infra
+Makefile text eol=lf
+Dockerfile text eol=lf
