@@ -63,12 +63,31 @@ from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz) and
 - labels.pickle
 - augmented_wikidata_mappings.pickle
 
-## Benchmark
+## Benchmark (expanded release)
 
-`benchmark/full.json`: aggregated all conversations with timestamp-normalised evidence.
-- `benchmark/train.json` (1–350)
-- `benchmark/dev.json` (351–450)
-- `benchmark/test.json` (451–606)
+The authoritative release contains **10,198 turns in 1,375 conversations**.
+
+| Split | Conversations | Turns |
+| --- | ---: | ---: |
+| train | 1,119 | 8,192 |
+| dev | 100 | 792 |
+| test | 156 | 1,214 |
+
+All 5,384 added turns belong to training. Original training conversations are
+preserved as a prefix; development and test contents are unchanged.
+Use `benchmark/train.json`, `dev.json`, and `test.json` separately.
+`full.json` is an overview with interleaved splits and reused IDs: its identity
+key is `(split, turn_id)`, with split membership in `split_index.json`.
+Do not slice or evaluate `full.json` directly.
+Gold evidence intervals use `YYYY-MM-DD` (legacy `YYYYMMDD` is also accepted).
+
+See [evaluation instructions](test_scripts/README.md) and the supplied
+[expansion provenance notes](benchmark/EXPANSION_NOTES.md).
+`validation_report.json` and `release_audit.json` are supplied release records,
+not results of a new model evaluation. Their referenced expansion intermediate
+files and audit scripts are not included in this checkout.
+The added data concentrates on offices, organizational relationships and sports
+membership; the original paper's domain distribution does not describe this release.
 
 ## Credits & Guidelines
 

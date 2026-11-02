@@ -8,6 +8,11 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from tqdm.auto import tqdm
+from pathlib import Path
+try:
+    from .dataset_utils import BENCHMARK, parse_dataset_date, load_split, complete_predictions, cap_conversations
+except ImportError:
+    from dataset_utils import BENCHMARK, parse_dataset_date, load_split, complete_predictions, cap_conversations
 
 # -----------------------------
 # Text normalization
@@ -24,7 +29,7 @@ def decode_escaped_unicode(s: str) -> str:
     if not isinstance(s, str):
         s = str(s)
     try:
-        s2 = bytes(s, "utf-8").decode("unicode_escape", errors="ignore")
+        s2 = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), s)
     except Exception:
         s2 = s
     for k, v in QUOTE_MAP.items():
@@ -86,8 +91,8 @@ def fuzzy_match(pred: str, gold: str) -> bool:
 # -----------------------------
 
 def parse_dataset_ymd(n: int) -> datetime:
-    s = str(n)
-    return datetime(int(s[0:4]), int(s[4:6]), int(s[6:8]))
+    return parse_dataset_date(n)
+
 
 def parse_pred_date(s: Optional[str], which: str) -> Optional[datetime]:
     if s is None:
@@ -338,6 +343,7 @@ def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Di
 # -----------------------------
 
 def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
+    preds = complete_predictions(dataset, preds)
     gold_map = get_gold_maps(dataset)
     total = em_hits = fuzzy_hits = tcr_hits = 0
     tcr_sum = 0.0
@@ -362,7 +368,7 @@ def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
             cand_list = []
         else:
             parts = re.split(r"[;/\|,]", str(pred_ans))
-            cand_list = [x.strip() for x in parts if x.strip()]
+            cand_list = [str(pred_ans).strip()] + [x.strip() for x in parts if x.strip()]
         exact_ok = False
         fuzzy_ok = False
         for cand in cand_list:
@@ -414,8 +420,10 @@ def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", required=True, help="Full dataset JSON (single list of conversations)")
-    ap.add_argument("--shots_conversations", type=int, default=10, help="How many earliest conversations used as few-shots")
+    ap.add_argument("--input", default=str(BENCHMARK / "test.json"), help="Evaluation split (default: benchmark/test.json)")
+    ap.add_argument("--train_input", default=str(BENCHMARK / "train.json"), help="Training split used exclusively for few-shot examples")
+    ap.add_argument("--output_dir", default="runs/nocontext", help="Directory for predictions, logs and reports")
+    ap.add_argument("--shots_conversations", type=int, default=3, help="How many earliest conversations used as few-shots")
     # Unused in flat mode, kept for CLI compatibility with related scripts
     ap.add_argument("--per_dialog_shot_limit", type=int, default=-1, help="[deprecated] ignored in flat mode")
     ap.add_argument("--max_shot_examples", type=int, default=-1, help="[deprecated] ignored in flat mode")
@@ -440,16 +448,25 @@ def main():
     ap.add_argument("--debug_raw_dump", action="store_true", help="Dump raw model outputs to debug_raw_model_outputs.jsonl")
     args = ap.parse_args()
 
-    with open(args.input, "r", encoding="utf-8") as f:
-        dataset = json.load(f)
-    if not isinstance(dataset, list):
-        print("Top-level must be a list of conversations.", file=sys.stderr)
-        sys.exit(1)
+    dataset = cap_conversations(load_split(args.input), args.max_test_turns)
+    training = load_split(args.train_input)
+    if args.shots_conversations > 0 and Path(args.input).resolve() == Path(args.train_input).resolve():
+        raise ValueError("Few-shot training and evaluation inputs must be different splits")
+    if args.eval_test_preds:
+        args.eval_test_preds = str(Path(args.eval_test_preds).resolve())
+    output_dir = Path(args.output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {"input": str(Path(args.input).resolve()),
+                "train_input": str(Path(args.train_input).resolve()),
+                "evaluation_turns": sum(len(c["turns"]) for c in dataset),
+                "arguments": vars(args).copy()}
+    manifest["arguments"]["openai_api_key"] = "[redacted]" if args.openai_api_key else None
+    os.chdir(output_dir)
 
     # Few-shot & test split
     K = max(0, int(args.shots_conversations))
-    shots_convs = dataset[:K]
-    test_convs = dataset[450:606]
+    shots_convs = training[:K]
+    test_convs = dataset
 
     # Collect shots
     shot_turns: List[Dict[str, Any]] = []
@@ -535,6 +552,9 @@ def main():
         mark_test_correct=True
     )
 
+    manifest["actual_shot_turns"] = len(shot_turns)
+    with open("run_manifest.json", "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
     with open("evaluation_report.json", "w", encoding="utf-8") as f:
         json.dump({"report": report}, f, ensure_ascii=False, indent=2)
 
