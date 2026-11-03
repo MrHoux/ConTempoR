@@ -11,4 +11,4 @@ Set DASHSCOPE_API_KEY in the environment before invoking run_bailian.py. Future 
 
 IoU uses inclusive days; accuracy threshold0.5. Entity scoring uses first-gold-label matching; relation scoring excludes structural first turns and missing labels. Formatting errors remain scored errors.
 
-Offline checks: python -B -m unittest discover -s test_scripts -p test_expanded_release.py. These validate structure and metrics, not historical truth. Three known reversed intervals remain in train/dev; repairs are paused.
+Offline checks: python -B -m unittest discover -s test_scripts -p test_expanded_release.py
