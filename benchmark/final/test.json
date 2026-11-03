@@ -10712,7 +10712,7 @@
         "signal": "BEFORE",
         "temporal_link": {
           "macro": "BEFORE",
-          "bucket": "about 1 decade earlier"
+          "bucket": "24 calendar years before the preceding governor took office"
         },
         "link_strategy": "S3_delta_temporal",
         "connection_type": null,
@@ -10828,8 +10828,8 @@
       },
       {
         "turn_id": "1126-5",
-        "question": "About 18 decades earlier, In which historical kingdom was Ravensburg located, specifically during the time of the Kingdom of Bavaria?",
-        "rephrased_question": "In which historical kingdom was Ravensburg located, specifically during the time of the Kingdom of Bavaria?",
+        "question": "206 calendar years before that observation, of which empire was Ravensburg a free imperial city, before coming under Bavarian rule?",
+        "rephrased_question": "Of which empire was Ravensburg a free imperial city in 1801, before coming under Bavarian rule in 1802?",
         "topic_entity": {
           "id": "Q6832",
           "label": "Ravensburg",
@@ -10855,29 +10855,29 @@
         "evidence": {
           "main": [
             [
-              "Ravensburg, country, Holy Roman Empire, end time, 1803",
-              "kb",
+              "Ravensburg, free imperial city in the Holy Roman Empire, observation year1801 before documented1802mediatization",
+              "info",
               [
-                "1803-01-01",
-                "1803-12-31"
+                "1801-01-01",
+                "1801-12-31"
               ]
             ]
           ],
           "constraint": [
             [
-              "Ravensburg, country, kingdom of Bavaria, end time, 1810, start time, 1803",
-              "kb",
+              "Ravensburg, lost imperial-city independence and became Bavarian, event year1802; municipal history and archive",
+              "info",
               [
-                "1803-01-01",
-                "1810-12-31"
+                "1802-01-01",
+                "1802-12-31"
               ]
             ]
           ]
         },
-        "signal": "OVERLAP",
+        "signal": "BEFORE",
         "temporal_link": {
           "macro": "BEFORE",
-          "bucket": "about 18 decades earlier"
+          "bucket": "206 calendar years before prior2007observation"
         },
         "link_strategy": "S3_delta_temporal",
         "connection_type": null,
@@ -10885,7 +10885,7 @@
       },
       {
         "turn_id": "1126-6",
-        "question": "Who headed Ravensburg’s government when its area was recorded as 92.05 in 2011, 208 calendar years after the historical period in the preceding answer ended?",
+        "question": "Who headed Ravensburg’s government when its area was recorded as 92.05 in 2011, 210 calendar years after the observation in the preceding question?",
         "rephrased_question": "Who headed Ravensburg’s government when its area was recorded as 92.05 in 2011?",
         "topic_entity": {
           "id": "Q6832",
@@ -10930,9 +10930,10 @@
         "signal": "OVERLAP",
         "temporal_link": {
           "variant": "S4_later",
-          "macro": "AFTER"
+          "macro": "AFTER",
+          "bucket": "210 calendar years after prior1801observation"
         },
-        "link_strategy": "S1_pronoun+S4_explicit_delta",
+        "link_strategy": "S4_explicit_delta",
         "connection_type": null,
         "temporal_reference": null
       },
