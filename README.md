@@ -63,7 +63,7 @@ from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz) and
 - labels.pickle
 - augmented_wikidata_mappings.pickle
 
-## Final benchmark
+## Benchmark
 
 Only the final dataset is retained in benchmark/final: 10,198 turns in 1,375 conversations, split by complete conversations at 6:2:2.
 
@@ -72,12 +72,6 @@ Only the final dataset is retained in benchmark/final: 10,198 turns in 1,375 con
 | train | 825 | 6,119 |
 | dev | 275 | 2,040 |
 | test | 275 | 2,039 |
-
-Use benchmark/final/train.json, dev.json and test.json separately. manifest.json records the schema and SHA-256 hashes. IDs are globally unique; conversation separation does not guarantee entity separation.
-
-Question repairs are paused: 489 requested training turns and 772 test turns remain unadjudicated. This release is not certified fully correct. Old snapshots, duplicate datasets, model responses, results and audit artifacts were removed.
-
-Temporal scoring uses interval IoU with inclusive days and accuracy at threshold0.5. See [dataset format](benchmark/final/README.md) and [evaluation code](test_scripts/README.md). No experiment results are bundled.
 
 ## Credits & Guidelines
 
