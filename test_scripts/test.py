@@ -96,7 +96,7 @@ def fuzzy_match(pred: str, gold: str) -> bool:
     return False
 
 # -----------------------------
-# Date parsing & TCR
+# Date parsing & IoU
 # -----------------------------
 
 def parse_dataset_ymd(n: int) -> datetime:
@@ -135,20 +135,20 @@ def parse_pred_date(s: Optional[str], which: str) -> Optional[datetime]:
 def closed_days(a: datetime, b: datetime) -> int:
     return (b - a).days + 1
 
-def temporal_coverage_ratio(pred: Tuple[datetime, datetime], gold: Tuple[datetime, datetime]) -> float:
+def temporal_iou(pred: Tuple[datetime, datetime], gold: Tuple[datetime, datetime]) -> float:
     if not pred or not gold:
         return 0.0
     ps, pe = pred; gs, ge = gold
-    if not (ps and pe and gs and ge) or pe < ps:
+    if not (ps and pe and gs and ge) or pe < ps or ge < gs:
         return 0.0
     os = max(ps, gs); oe = min(pe, ge)
     if oe < os:
         return 0.0
     overlap = closed_days(os, oe)
-    pred_len = closed_days(ps, pe)
-    if pred_len <= 0:
+    union_len = closed_days(ps, pe) + closed_days(gs, ge) - overlap
+    if union_len <= 0:
         return 0.0
-    return max(0.0, min(1.0, overlap / pred_len))
+    return max(0.0, min(1.0, overlap / union_len))
 
 # -----------------------------
 # Gold helpers
@@ -531,25 +531,29 @@ def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Di
 
 def evaluate_test(dataset: List[Dict[str, Any]],
                   preds: List[Dict[str, Any]],
-                  tcr_threshold: float,
+                  iou_threshold: float,
                   log_path: Optional[str],
                   mark_test_correct: bool,
                   strategy_assignment: str):
     preds = complete_predictions(dataset, preds)
     gold_map = get_gold_maps(dataset)
+    # Conversation position is authoritative; repairs may replace checks.
+    first_keys = {(c['conversation_id'], c['turns'][0]['turn_id'])
+                  for c in dataset if c.get('turns')}
+    missing_relation_ids = []
 
     total = 0
     em_hits = 0
     fuzzy_hits = 0
-    tcr_hits = 0
-    tcr_sum = 0.0
+    iou_hits = 0
+    iou_sum = 0.0
 
     rel_total = 0
     rel_hits = 0
 
     strat_keys = ["S1", "S2", "S3", "S4"]
     by_strategy = {k: {"samples": 0, "entity_em": 0, "entity_fuzzy": 0,
-                       "time_tcr_hits": 0, "time_tcr_sum": 0.0,
+                       "time_iou_hits": 0, "time_iou_sum": 0.0,
                        "relation_total": 0, "relation_hits": 0}
                    for k in strat_keys}
 
@@ -563,7 +567,7 @@ def evaluate_test(dataset: List[Dict[str, Any]],
     res = {
         "totals": {"samples": 0, "relation_scored_samples": 0},
         "entity": {"EM": 0.0, "Fuzzy": 0.0},
-        "time": {"TCR_threshold": tcr_threshold, "Accuracy": 0.0, "Mean_TCR": 0.0},
+        "time": {"IoU_threshold": iou_threshold, "Accuracy": 0.0, "Mean_IoU": 0.0},
         "relation": {"Accuracy": 0.0},
         "by_strategy": {},
         "by_strategy_missing": 0,
@@ -605,7 +609,7 @@ def evaluate_test(dataset: List[Dict[str, Any]],
         if exact_ok: em_hits += 1
         if fuzzy_ok: fuzzy_hits += 1
 
-        # Time (TCR)
+        # Time (IoU)
         gold_range = extract_gold_time_range(gold_turn)
         tr = p.get("time_range") or {}
         pred_range = None
@@ -614,15 +618,19 @@ def evaluate_test(dataset: List[Dict[str, Any]],
             pe = parse_pred_date(tr.get("end"), "end")
             if ps and pe and pe >= ps:
                 pred_range = (ps, pe)
-        tcr = temporal_coverage_ratio(pred_range, gold_range) if (pred_range and gold_range) else 0.0
-        tcr_sum += tcr
-        time_ok = (tcr >= tcr_threshold)
-        if time_ok: tcr_hits += 1
+        iou = temporal_iou(pred_range, gold_range) if (pred_range and gold_range) else 0.0
+        iou_sum += iou
+        time_ok = (iou >= iou_threshold)
+        if time_ok: iou_hits += 1
 
         # Relation
-        first, gold_rel = gold_first_and_relation(gold_turn)
+        _, gold_rel = gold_first_and_relation(gold_turn)
+        first = (cid, tid) in first_keys
+        relation_scorable = not first and gold_rel in ('AFTER', 'BEFORE', 'OVERLAP')
+        if not first and not relation_scorable:
+            missing_relation_ids.append(str(tid))
         relation_ok = None
-        if not first:
+        if relation_scorable:
             rel_total += 1
             pred_rel = p.get("pred_relation")
             if isinstance(pred_rel, str) and pred_rel in ("AFTER","BEFORE","OVERLAP","UNKNOWN"):
@@ -646,9 +654,9 @@ def evaluate_test(dataset: List[Dict[str, Any]],
                 stat["samples"] += 1
                 if exact_ok: stat["entity_em"] += 1
                 if fuzzy_ok: stat["entity_fuzzy"] += 1
-                if time_ok:  stat["time_tcr_hits"] += 1
-                stat["time_tcr_sum"] += tcr
-                if not first:
+                if time_ok:  stat["time_iou_hits"] += 1
+                stat["time_iou_sum"] += iou
+                if relation_scorable:
                     stat["relation_total"] += 1
                     if relation_ok:
                         stat["relation_hits"] += 1
@@ -664,12 +672,16 @@ def evaluate_test(dataset: List[Dict[str, Any]],
     if total > 0:
         res["entity"]["EM"] = round(em_hits / total, 4)
         res["entity"]["Fuzzy"] = round(fuzzy_hits / total, 4)
-        res["time"]["Accuracy"] = round(tcr_hits / total, 4)
-        res["time"]["Mean_TCR"] = round(tcr_sum / total, 4)
+        res["time"]["Accuracy"] = round(iou_hits / total, 4)
+        res["time"]["Mean_IoU"] = round(iou_sum / total, 4)
     if rel_total > 0:
         res["relation"]["Accuracy"] = round(rel_hits / rel_total, 4)
     res["totals"]["samples"] = total
     res["totals"]["relation_scored_samples"] = rel_total
+    res["totals"]["first_turns_excluded"] = len(first_keys)
+    res["totals"]["missing_gold_relations"] = len(missing_relation_ids)
+    res["relation"]["missing_gold_turn_ids"] = missing_relation_ids
+    res["relation"]["policy"] = "Exclude structural first turns and missing/invalid gold relations; retain missing predictions as errors."
     res["by_strategy_missing"] = missing_s_tags
 
     for b, stat in by_strategy.items():
@@ -681,9 +693,9 @@ def evaluate_test(dataset: List[Dict[str, Any]],
                 "Fuzzy": round(stat["entity_fuzzy"]/s, 4) if s else 0.0
             },
             "time": {
-                "TCR_threshold": tcr_threshold,
-                "Accuracy": round(stat["time_tcr_hits"]/s, 4) if s else 0.0,
-                "Mean_TCR": round(stat["time_tcr_sum"]/s, 4) if s else 0.0
+                "IoU_threshold": iou_threshold,
+                "Accuracy": round(stat["time_iou_hits"]/s, 4) if s else 0.0,
+                "Mean_IoU": round(stat["time_iou_sum"]/s, 4) if s else 0.0
             },
             "relation": {
                 "Accuracy": round(stat["relation_hits"]/rt, 4) if rt else None,
@@ -709,7 +721,7 @@ def evaluate_test(dataset: List[Dict[str, Any]],
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default=str(BENCHMARK / "test.json"), help="Evaluation split (default: benchmark/test.json)")
+    ap.add_argument("--input", default=str(BENCHMARK / "test.json"), help="Evaluation split (default: benchmark/final/test.json)")
     ap.add_argument("--train_input", default=str(BENCHMARK / "train.json"), help="Training split used exclusively for few-shot examples")
     ap.add_argument("--output_dir", default="runs/context", help="Directory for predictions, logs and reports")
     ap.add_argument("--shots_conversations", type=int, default=3, help="How many earliest full conversations to use as few-shots")
@@ -731,7 +743,7 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--max_completion_tokens", type=int, default=512)
     ap.add_argument("--json_strict", action="store_true", help="Force JSON response_format if backend supports")
-    ap.add_argument("--tcr_threshold", type=float, default=0.5)
+    ap.add_argument("--iou_threshold", type=float, default=0.5)
     ap.add_argument("--preds_out", default="test_preds.json", help="Where to save predictions if auto-eval")
     ap.add_argument("--log_path", default="log")
     ap.add_argument("--eval_test_preds", help="If provided, evaluate this predictions JSON instead of auto eval")
@@ -852,7 +864,7 @@ def main():
 
     # Evaluate
     report = evaluate_test(dataset, preds,
-                           tcr_threshold=args.tcr_threshold,
+                           iou_threshold=args.iou_threshold,
                            log_path=args.log_path,
                            mark_test_correct=True,
                            strategy_assignment=args.strategy_assignment)

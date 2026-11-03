@@ -63,31 +63,21 @@ from [here](https://qa.mpi-inf.mpg.de/faith/data_for_reproduce_faith.tar.gz) and
 - labels.pickle
 - augmented_wikidata_mappings.pickle
 
-## Benchmark (expanded release)
+## Final benchmark
 
-The authoritative release contains **10,198 turns in 1,375 conversations**.
+Only the final dataset is retained in benchmark/final: 10,198 turns in 1,375 conversations, split by complete conversations at 6:2:2.
 
 | Split | Conversations | Turns |
 | --- | ---: | ---: |
-| train | 1,119 | 8,192 |
-| dev | 100 | 792 |
-| test | 156 | 1,214 |
+| train | 825 | 6,119 |
+| dev | 275 | 2,040 |
+| test | 275 | 2,039 |
 
-All 5,384 added turns belong to training. Original training conversations are
-preserved as a prefix; development and test contents are unchanged.
-Use `benchmark/train.json`, `dev.json`, and `test.json` separately.
-`full.json` is an overview with interleaved splits and reused IDs: its identity
-key is `(split, turn_id)`, with split membership in `split_index.json`.
-Do not slice or evaluate `full.json` directly.
-Gold evidence intervals use `YYYY-MM-DD` (legacy `YYYYMMDD` is also accepted).
+Use benchmark/final/train.json, dev.json and test.json separately. manifest.json records the schema and SHA-256 hashes. IDs are globally unique; conversation separation does not guarantee entity separation.
 
-See [evaluation instructions](test_scripts/README.md) and the supplied
-[expansion provenance notes](benchmark/EXPANSION_NOTES.md).
-`validation_report.json` and `release_audit.json` are supplied release records,
-not results of a new model evaluation. Their referenced expansion intermediate
-files and audit scripts are not included in this checkout.
-The added data concentrates on offices, organizational relationships and sports
-membership; the original paper's domain distribution does not describe this release.
+Question repairs are paused: 489 requested training turns and 772 test turns remain unadjudicated. This release is not certified fully correct. Old snapshots, duplicate datasets, model responses, results and audit artifacts were removed.
+
+Temporal scoring uses interval IoU with inclusive days and accuracy at threshold0.5. See [dataset format](benchmark/final/README.md) and [evaluation code](test_scripts/README.md). No experiment results are bundled.
 
 ## Credits & Guidelines
 

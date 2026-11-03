@@ -1,0 +1,48 @@
+{
+  "release_id": "final_2026-11-03",
+  "schema_version": "1.0",
+  "audit_status": "paused_by_user",
+  "audit_completed": {
+    "train_first_1000": 511,
+    "test": 1267
+  },
+  "audit_pending": {
+    "train_first_1000": 489,
+    "test": 772
+  },
+  "turn_fields": [
+    "turn_id",
+    "question",
+    "rephrased_question",
+    "topic_entity",
+    "question_entity",
+    "answer",
+    "evidence",
+    "signal",
+    "temporal_link",
+    "link_strategy",
+    "connection_type",
+    "temporal_reference"
+  ],
+  "splits": {
+    "train": {
+      "conversations": 825,
+      "turns": 6119,
+      "sha256": "58d495fd926dc4288e9bb68968354b78ea8ba2545e26261b6d0dec908427a9ae",
+      "content_preservation": "passed"
+    },
+    "dev": {
+      "conversations": 275,
+      "turns": 2040,
+      "sha256": "0752012a60751513e639e355c863962e9ca7bda2810eca09c561b0dc4377785b",
+      "content_preservation": "passed"
+    },
+    "test": {
+      "conversations": 275,
+      "turns": 2039,
+      "sha256": "db886a48ebfd8d0c26856887f382870891f3e0bb352e1dbc8dead7585b1a48ab",
+      "content_preservation": "passed"
+    }
+  },
+  "retention": "Only final train/dev/test retained; prior experiments and audit artifacts removed at user request."
+}

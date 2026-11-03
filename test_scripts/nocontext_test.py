@@ -87,7 +87,7 @@ def fuzzy_match(pred: str, gold: str) -> bool:
     return False
 
 # -----------------------------
-# Dates & TCR
+# Dates & IoU
 # -----------------------------
 
 def parse_dataset_ymd(n: int) -> datetime:
@@ -128,24 +128,24 @@ def parse_pred_date(s: Optional[str], which: str) -> Optional[datetime]:
 def closed_days(a: datetime, b: datetime) -> int:
     return (b - a).days + 1
 
-def temporal_coverage_ratio(pred: Tuple[datetime, datetime], gold: Tuple[datetime, datetime]) -> float:
+def temporal_iou(pred: Tuple[datetime, datetime], gold: Tuple[datetime, datetime]) -> float:
     if not pred or not gold:
         return 0.0
     ps, pe = pred
     gs, ge = gold
     if not (ps and pe and gs and ge):
         return 0.0
-    if pe < ps:
+    if pe < ps or ge < gs:
         return 0.0
     os = max(ps, gs)
     oe = min(pe, ge)
     if oe < os:
         return 0.0
     overlap = closed_days(os, oe)
-    pred_len = closed_days(ps, pe)
-    if pred_len <= 0:
+    union_len = closed_days(ps, pe) + closed_days(gs, ge) - overlap
+    if union_len <= 0:
         return 0.0
-    return max(0.0, min(1.0, overlap / pred_len))
+    return max(0.0, min(1.0, overlap / union_len))
 
 # -----------------------------
 # Gold helpers
@@ -342,11 +342,11 @@ def load_predictions_compat(dataset: List[Dict[str, Any]], path: str) -> List[Di
 # Evaluation (with tqdm)
 # -----------------------------
 
-def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
+def evaluate_flat(dataset, preds, iou_threshold, log_path, mark_test_correct):
     preds = complete_predictions(dataset, preds)
     gold_map = get_gold_maps(dataset)
-    total = em_hits = fuzzy_hits = tcr_hits = 0
-    tcr_sum = 0.0
+    total = em_hits = fuzzy_hits = iou_hits = 0
+    iou_sum = 0.0
     correct_ids, log_lines = [], []
     def log(msg): log_lines.append(msg)
 
@@ -384,10 +384,10 @@ def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
         ps = parse_pred_date(tr.get("start"), "start") if isinstance(tr, dict) else None
         pe = parse_pred_date(tr.get("end"), "end") if isinstance(tr, dict) else None
         pred_range = (ps, pe) if ps and pe and pe >= ps else None
-        tcr = temporal_coverage_ratio(pred_range, gold_range) if (pred_range and gold_range) else 0.0
-        tcr_sum += tcr
-        time_ok = (tcr >= tcr_threshold)
-        if time_ok: tcr_hits += 1
+        iou = temporal_iou(pred_range, gold_range) if (pred_range and gold_range) else 0.0
+        iou_sum += iou
+        time_ok = (iou >= iou_threshold)
+        if time_ok: iou_hits += 1
         if mark_test_correct and fuzzy_ok and time_ok:
             correct_ids.append(str(tid))
 
@@ -398,9 +398,9 @@ def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
             "Fuzzy": round(fuzzy_hits / total, 4) if total else 0.0
         },
         "time": {
-            "TCR_threshold": tcr_threshold,
-            "Accuracy": round(tcr_hits / total, 4) if total else 0.0,
-            "Mean_TCR": round(tcr_sum / total, 4) if total else 0.0
+            "IoU_threshold": iou_threshold,
+            "Accuracy": round(iou_hits / total, 4) if total else 0.0,
+            "Mean_IoU": round(iou_sum / total, 4) if total else 0.0
         }
     }
     if log_path:
@@ -420,7 +420,7 @@ def evaluate_flat(dataset, preds, tcr_threshold, log_path, mark_test_correct):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default=str(BENCHMARK / "test.json"), help="Evaluation split (default: benchmark/test.json)")
+    ap.add_argument("--input", default=str(BENCHMARK / "test.json"), help="Evaluation split (default: benchmark/final/test.json)")
     ap.add_argument("--train_input", default=str(BENCHMARK / "train.json"), help="Training split used exclusively for few-shot examples")
     ap.add_argument("--output_dir", default="runs/nocontext", help="Directory for predictions, logs and reports")
     ap.add_argument("--shots_conversations", type=int, default=3, help="How many earliest conversations used as few-shots")
@@ -438,7 +438,7 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--max_completion_tokens", type=int, default=512)
     ap.add_argument("--json_strict", action="store_true", help="Force JSON response_format if backend supports")
-    ap.add_argument("--tcr_threshold", type=float, default=0.5)
+    ap.add_argument("--iou_threshold", type=float, default=0.5)
     ap.add_argument("--preds_out", default="test_preds.json", help="Where to save predictions if auto-eval")
     ap.add_argument("--log_path", default="log")
     ap.add_argument("--eval_test_preds", help="If provided, evaluate this predictions JSON/JSONL instead of auto eval")
@@ -547,7 +547,7 @@ def main():
     # Evaluate
     report = evaluate_flat(
         dataset, preds,
-        tcr_threshold=args.tcr_threshold,
+        iou_threshold=args.iou_threshold,
         log_path=args.log_path,
         mark_test_correct=True
     )

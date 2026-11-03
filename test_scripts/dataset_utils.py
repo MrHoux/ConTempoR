@@ -5,7 +5,7 @@ import warnings
 from pathlib import Path
 from datetime import datetime
 
-BENCHMARK = Path(__file__).resolve().parents[1] / "benchmark"
+BENCHMARK = Path(__file__).resolve().parents[1] / "benchmark" / "final"
 
 
 def parse_dataset_date(value):
@@ -18,7 +18,7 @@ def parse_dataset_date(value):
 def load_split(path):
     path = Path(path).resolve()
     if path.name.lower() == "full.json":
-        raise ValueError("Use train.json/dev.json/test.json separately; full.json mixes split-local IDs.")
+        raise ValueError("Use train.json/dev.json/test.json separately; full.json mixes evaluation splits.")
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, list) or not data:
