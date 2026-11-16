@@ -80,7 +80,7 @@ Only the final dataset is retained in benchmark/final: 10,198 turns in 1,375 con
 
 ## ConTempoR Benchmark
 
-**DOI:** 10.5281/zenodo.24281532
+**DOI:** 10.5281/zenodo.24281685
 
 ## Availability
 
@@ -99,7 +99,7 @@ The dataset is provided in JSON format. Each instance includes the question, ans
 
 If you use ConTempoR, please cite the Zenodo record:
 
-- DOI: 10.5281/zenodo.24281532
+- DOI: https://doi.org/10.5281/zenodo.24281685
 
 This code is based on the method from:
 ```bibtex
